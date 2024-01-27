@@ -4,8 +4,10 @@ import Link from "next/link";
 import styles from "../../app/page.module.css";
 import { passport } from "@imtbl/sdk";
 import { passportInstance } from "@/lib/config";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { displayPartialAddress } from "@/lib/utils";
+import { useSharedContext } from "../context/sharedContext";
+import { BrowserProvider } from "ethers";
 
 /**
  * Header.
@@ -15,6 +17,9 @@ export default function Header() {
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const [imxProvider, setImxProvider] = useState<any | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+
+  // use context
+  const { setEvmProvider, setEvmSigner } = useSharedContext();
 
   useEffect(() => {
     const init = async () => {
@@ -29,20 +34,30 @@ export default function Header() {
           setIsLoggedIn(true);
         }
 
-        const provider = await passportInstance.connectImx();
-        const evmProvider = passportInstance.connectEvm();
+        const _imxProvider = await passportInstance.connectImx();
+        const provider = passportInstance.connectEvm();
+        const _evmProvider = new BrowserProvider(provider);
 
-        console.log("evm provider ", evmProvider);
+        console.log("data ", await _imxProvider.createOrder);
+
+        setEvmProvider(_evmProvider);
+
+        const signer = await _evmProvider.getSigner();
+        const address = await signer.getAddress();
+
+        console.log("evm provider ", _evmProvider);
+        console.log("signer ", signer);
+        console.log("address ", address);
 
         if (provider) {
-          const isRegistered = await provider.isRegisteredOffchain();
+          const isRegistered = await _imxProvider.isRegisteredOffchain();
 
           console.log("is registered ", isRegistered);
           if (!isRegistered) {
-            await provider.registerOffchain();
+            await _imxProvider.registerOffchain();
           }
 
-          const userAddress = await provider.getAddress();
+          const userAddress = await _imxProvider.getAddress();
           console.log("user address ", userAddress);
           setUserInfo(user!);
           setUserAddress(userAddress);
