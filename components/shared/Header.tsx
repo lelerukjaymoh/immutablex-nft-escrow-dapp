@@ -14,12 +14,11 @@ import { BrowserProvider } from "ethers";
  */
 export default function Header() {
   const [userInfo, setUserInfo] = useState<passport.UserProfile | null>(null);
-  const [userAddress, setUserAddress] = useState<string | null>(null);
   const [imxProvider, setImxProvider] = useState<any | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
   // use context
-  const { setEvmProvider, setEvmSigner } = useSharedContext();
+  const { accountAddress, setAccountAddress } = useSharedContext();
 
   useEffect(() => {
     const init = async () => {
@@ -30,26 +29,9 @@ export default function Header() {
         const user = await passportInstance.getUserInfo();
         console.log("user ", user);
 
-        if (user) {
-          setIsLoggedIn(true);
-        }
-
         const _imxProvider = await passportInstance.connectImx();
-        const provider = passportInstance.connectEvm();
-        const _evmProvider = new BrowserProvider(provider);
 
-        console.log("data ", await _imxProvider.createOrder);
-
-        setEvmProvider(_evmProvider);
-
-        const signer = await _evmProvider.getSigner();
-        const address = await signer.getAddress();
-
-        console.log("evm provider ", _evmProvider);
-        console.log("signer ", signer);
-        console.log("address ", address);
-
-        if (provider) {
+        if (_imxProvider) {
           const isRegistered = await _imxProvider.isRegisteredOffchain();
 
           console.log("is registered ", isRegistered);
@@ -60,7 +42,7 @@ export default function Header() {
           const userAddress = await _imxProvider.getAddress();
           console.log("user address ", userAddress);
           setUserInfo(user!);
-          setUserAddress(userAddress);
+          setAccountAddress(userAddress);
           console.log("user info ", user);
         }
       } catch (error) {
@@ -90,7 +72,7 @@ export default function Header() {
     try {
       await passportInstance.logout();
       setUserInfo(null);
-      setUserAddress(null);
+      setAccountAddress("");
     } catch (error) {
       console.log("error ", error);
     }
@@ -102,22 +84,15 @@ export default function Header() {
         <Link href={"/"}>NFT Escrow on Immutable X</Link>
       </h2>
       <div style={{ float: "right" }}>
-        {/* <p style={{ marginLeft: "40px" }}>
-          <Link className="button" href={`/swap`}>
-            Swap
-          </Link>
-        </p> */}
-
         {!userInfo ? (
           <p style={{ marginLeft: "40px", cursor: "pointer" }} onClick={login}>
-            Login {userAddress}
+            Login
           </p>
         ) : (
           <div className={styles.grid}>
             <p style={{ marginLeft: "20px" }}>{userInfo.email}</p>
             <p style={{ marginLeft: "20px" }}>
-              {" "}
-              {displayPartialAddress(userAddress!)}
+              {displayPartialAddress(accountAddress!)}
             </p>
             <p
               style={{ marginLeft: "20px", cursor: "pointer" }}
