@@ -23,7 +23,7 @@ export default function NFT() {
     const client = new blockchainData.BlockchainData({
       baseConfig: {
         environment: config.Environment.SANDBOX,
-        publishableKey: "pk_imapik-test-DRLBqW2TJLX79i3pybk5",
+        publishableKey: process.env.NEXT_PUBLIC_IMMUTABLE_PUBLISHABLE_KEY,
       },
     });
 
@@ -82,8 +82,6 @@ export default function NFT() {
           process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS!,
           [
             "function mint(address to, uint256 tokenId) public payable",
-            "function totalSupply() public view returns (uint256)",
-            "function grantMinterRole(address account) public",
             "function totalSupply() public view returns (uint256)",
           ],
           evmSigner
@@ -298,8 +296,8 @@ export default function NFT() {
                     </span>
                   </div>
                   <SwapNFT
-                    proposeeContractAddress={nft.contract_address}
-                    proposeeTokenId={nft.token_id}
+                    proposeeNFTContractAddress={nft.contract_address}
+                    proposeeNFTTokenId={nft.token_id}
                   />
                 </div>
               );

@@ -3,7 +3,7 @@ import { config, passport } from '@imtbl/sdk';
 export const passportInstance = new passport.Passport({
     baseConfig: {
         environment: config.Environment.SANDBOX,
-        publishableKey: '[YOUR_PUBLISHABLE_KEY]', // TODO: figure out how to get publishable key, its not provided on the dashboard as expected
+        publishableKey: process.env.NEXT_PUBLIC_IMMUTABLE_PUBLISHABLE_KEY,
     },
     clientId: process.env.NEXT_PUBLIC_CLIENT_ID!,
     redirectUri: process.env.NEXT_PUBLIC_REDIRECT_URI!,

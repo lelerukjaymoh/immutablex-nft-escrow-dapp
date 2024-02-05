@@ -18,18 +18,30 @@ export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
   // use context
-  const { accountAddress, setAccountAddress } = useSharedContext();
+  const { accountAddress, setEvmSigner, setEvmProvider, setAccountAddress } =
+    useSharedContext();
 
   useEffect(() => {
     const init = async () => {
       console.log("rerendering init ");
       try {
-        if (!isLoggedIn) return;
-
         const user = await passportInstance.getUserInfo();
         console.log("user ", user);
 
+        const cachedUserEmail = localStorage.getItem("user");
+        console.log("cached user email ", cachedUserEmail);
+        if (cachedUserEmail && user && cachedUserEmail == user.email) {
+          setIsLoggedIn(true);
+          setUserInfo(user);
+        }
+
         const _imxProvider = await passportInstance.connectImx();
+
+        const provider = passportInstance.connectEvm();
+        const evmProvider = new BrowserProvider(provider);
+        const signer = await evmProvider.getSigner();
+        setEvmSigner(signer);
+        setEvmProvider(evmProvider);
 
         if (_imxProvider) {
           const isRegistered = await _imxProvider.isRegisteredOffchain();
@@ -60,6 +72,7 @@ export default function Header() {
 
       if (profile) {
         setIsLoggedIn(true);
+        localStorage.setItem("user", JSON.stringify(profile.email));
       }
 
       console.log("profile ", profile);
@@ -72,7 +85,9 @@ export default function Header() {
     try {
       await passportInstance.logout();
       setUserInfo(null);
+      setIsLoggedIn(false);
       setAccountAddress("");
+      localStorage.removeItem("user");
     } catch (error) {
       console.log("error ", error);
     }

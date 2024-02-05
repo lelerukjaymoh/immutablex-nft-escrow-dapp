@@ -36,6 +36,7 @@
 
 .button {
   position: relative;
+  cursor: pointer;
   margin: 0;
   padding: 1rem;
   background-color: rgba(var(--callout-rgb), 0.5);
@@ -129,6 +130,13 @@
 .logo {
   position: relative;
 }
+
+.table td {
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(var(--callout-border-rgb), 0.3);
+}
+
+
 /* Enable hover only on non-touch devices */
 /* @media (hover: hover) and (pointer: fine) {
   .card:hover {
