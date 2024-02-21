@@ -1,11 +1,10 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "../app/page.module.css";
 import { useSharedContext } from "./context/sharedContext";
-import { Contract, JsonRpcProvider, Signer, Wallet, ethers } from "ethers";
+import { Contract } from "ethers";
 import ESCROW_ABI from "../lib/ABI/escrow.json";
-import { AbiCoder } from "ethers";
 
 /**
  * NFT Swapping.
@@ -17,10 +16,9 @@ export default function SwapNFT({
   const [proposerNFTContractAddress, setProposerNFTContractAddress] =
     useState<string>("");
   const [proposerNFTTokenId, setProposerNFTTokenId] = useState<string>("");
-  const [escrowSigner, setEscrowSigner] = useState<Signer>();
   const [escrowContract, setEscrowContract] = useState<Contract>();
 
-  const { evmSigner, evmProvider } = useSharedContext();
+  const { evmSigner } = useSharedContext();
 
   const handleSmartContractInputChange = (e: any) => {
     setProposerNFTContractAddress(e.target.value);
@@ -44,6 +42,7 @@ export default function SwapNFT({
         return;
       }
 
+      console.log("Swapping details");
       console.log("proposer contract address ", proposerNFTContractAddress);
       console.log("proposer token id ", proposerNFTTokenId);
 
@@ -64,8 +63,6 @@ export default function SwapNFT({
         proposerNFT,
         proposeeNFT
       );
-
-      console.log("proposal ", proposal);
 
       await proposal
         ?.wait()
@@ -89,7 +86,11 @@ export default function SwapNFT({
           const transfer = await proposerNFTContract?.safeTransferFrom(
             proposer,
             process.env.NEXT_PUBLIC_ESCROW_EOA_ADDRESS,
-            proposerNFTTokenId
+            proposerNFTTokenId,
+            {
+              maxPriorityFeePerGas: 10e9,
+              maxFeePerGas: 15e9,
+            }
           );
 
           await transfer
@@ -110,25 +111,20 @@ export default function SwapNFT({
   };
 
   useEffect(() => {
-    const signer = new Wallet(
-      process.env.NEXT_PUBLIC_ESCROW_PRIVATE_KEY!,
-      new JsonRpcProvider("https://rpc.testnet.immutable.com")
-    );
-
     const contract = new Contract(
       process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS!,
       ESCROW_ABI,
       evmSigner
     );
 
-    setEscrowSigner(signer);
     setEscrowContract(contract);
-  }, []);
+  }, [evmSigner]);
 
   return (
     <div style={{ marginTop: "50px" }} className={styles.description}>
       <div>
         <h4>Swap Your NFT with any of the available below</h4>
+        {/* <button onClick={launch}>Event </button> */}
         <div style={{ marginTop: "30px" }}>
           <span>
             Enter the contract address and token ID of the NFT you want to swap

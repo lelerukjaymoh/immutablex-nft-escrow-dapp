@@ -402,6 +402,93 @@
     },
     {
         "type": "event",
+        "name": "ProposalAccepted",
+        "inputs": [
+            {
+                "name": "proposal",
+                "type": "tuple",
+                "indexed": false,
+                "internalType": "struct IEscrow.Proposal",
+                "components": [
+                    {
+                        "name": "id",
+                        "type": "uint256",
+                        "internalType": "uint256"
+                    },
+                    {
+                        "name": "proposer",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "proposee",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "proposerNFT",
+                        "type": "tuple",
+                        "internalType": "struct IEscrow.NFT",
+                        "components": [
+                            {
+                                "name": "nftAddress",
+                                "type": "address",
+                                "internalType": "address"
+                            },
+                            {
+                                "name": "tokenId",
+                                "type": "uint256",
+                                "internalType": "uint256"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "proposeeNFT",
+                        "type": "tuple",
+                        "internalType": "struct IEscrow.NFT",
+                        "components": [
+                            {
+                                "name": "nftAddress",
+                                "type": "address",
+                                "internalType": "address"
+                            },
+                            {
+                                "name": "tokenId",
+                                "type": "uint256",
+                                "internalType": "uint256"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "status",
+                        "type": "uint8",
+                        "internalType": "enum IEscrow.ProposalStatus"
+                    },
+                    {
+                        "name": "timestamp",
+                        "type": "uint256",
+                        "internalType": "uint256"
+                    }
+                ]
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "ProposalCancelled",
+        "inputs": [
+            {
+                "name": "proposalId",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
         "name": "ProposalCreated",
         "inputs": [
             {
@@ -470,6 +557,19 @@
                         "internalType": "uint256"
                     }
                 ]
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "ProposalRejected",
+        "inputs": [
+            {
+                "name": "proposalId",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
             }
         ],
         "anonymous": false
@@ -545,6 +645,80 @@
                 "type": "address",
                 "indexed": true,
                 "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "Swapped",
+        "inputs": [
+            {
+                "name": "proposal",
+                "type": "tuple",
+                "indexed": false,
+                "internalType": "struct IEscrow.Proposal",
+                "components": [
+                    {
+                        "name": "id",
+                        "type": "uint256",
+                        "internalType": "uint256"
+                    },
+                    {
+                        "name": "proposer",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "proposee",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "proposerNFT",
+                        "type": "tuple",
+                        "internalType": "struct IEscrow.NFT",
+                        "components": [
+                            {
+                                "name": "nftAddress",
+                                "type": "address",
+                                "internalType": "address"
+                            },
+                            {
+                                "name": "tokenId",
+                                "type": "uint256",
+                                "internalType": "uint256"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "proposeeNFT",
+                        "type": "tuple",
+                        "internalType": "struct IEscrow.NFT",
+                        "components": [
+                            {
+                                "name": "nftAddress",
+                                "type": "address",
+                                "internalType": "address"
+                            },
+                            {
+                                "name": "tokenId",
+                                "type": "uint256",
+                                "internalType": "uint256"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "status",
+                        "type": "uint8",
+                        "internalType": "enum IEscrow.ProposalStatus"
+                    },
+                    {
+                        "name": "timestamp",
+                        "type": "uint256",
+                        "internalType": "uint256"
+                    }
+                ]
             }
         ],
         "anonymous": false
