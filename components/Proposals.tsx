@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "../app/page.module.css";
-import { Contract, JsonRpcProvider } from "ethers";
+import { Contract } from "ethers";
 import { useSharedContext } from "./context/sharedContext";
 import ESCROW_ABI from "../lib/ABI/escrow.json";
 import { displayPartialAddress } from "@/lib/utils";
@@ -46,12 +46,6 @@ export default function Proposals() {
         let _proposals = [];
 
         for (const proposal of proposalResponse) {
-          console.log(
-            "proposal ",
-            proposal.proposeeNFT,
-            proposal.proposerNFT[0]
-          );
-
           _proposals.push({
             id: parseInt(proposal.id),
             proposer: proposal.proposer,
@@ -80,29 +74,63 @@ export default function Proposals() {
             },
             status:
               parseInt(proposal.status) == 0
-                ? "Proposed"
+                ? "Swap Proposed"
                 : parseInt(proposal.status) == 1
-                ? "Completed"
-                : "Rejected",
+                ? "Swap Completed"
+                : "Swap Rejected",
           });
         }
 
-        console.log("_proposals ", _proposals);
-
         setProposals(_proposals);
-
-        console.log("proposals ", proposals);
       } catch (error) {
-        console.log("error ", error);
+        console.log("error getting proposals ", error);
       }
     };
 
     getProposals();
   }, [proposalState, evmSigner]);
 
-  const acceptSwap = async (proposalId: number) => {
+  const acceptSwap = async (
+    proposalId: number,
+    proposeeNFTContract: string,
+    proposeeTokenId: number
+  ) => {
+    // Transfer the proposee NFT to escrow
+    // This function is expected to be called by only the proposee
+    const proposerNFTContract = new Contract(
+      proposeeNFTContract,
+      [
+        "function safeTransferFrom(address from, address to, uint256 tokenId) public",
+        "function ownerOf(uint tokenId) public returns (address)",
+      ],
+      evmSigner
+    );
+
+    const proposee = await proposerNFTContract?.ownerOf.staticCall(
+      proposeeTokenId
+    );
+
+    const transfer = await proposerNFTContract?.safeTransferFrom(
+      proposee,
+      process.env.NEXT_PUBLIC_ESCROW_EOA_ADDRESS,
+      proposeeTokenId,
+      {
+        maxPriorityFeePerGas: 10e9,
+        maxFeePerGas: 15e9,
+      }
+    );
+
+    await transfer
+      ?.wait()
+      .then(async (receipt: any) => {
+        console.log("NFT transferred to Escrow ", receipt.hash);
+      })
+      .catch((err: any) => {
+        console.log("error transferring NFT ", err);
+      });
+
     await escrowContract
-      ?.acceptProposal(proposalId)
+      ?.acceptSwapProposal(proposalId)
       .then(() => setProposalState(!proposalState))
       .catch((error) => console.log("error accepting swap", error));
   };
@@ -111,7 +139,7 @@ export default function Proposals() {
     await escrowContract
       ?.cancelProposal(proposalId)
       .then(() => setProposalState(!proposalState))
-      .catch((error) => console.log("error accepting swap", error));
+      .catch((error) => console.log("error cancelling swap", error));
   };
 
   const rejectSwap = async (proposalId: number) => {
@@ -191,6 +219,7 @@ export default function Proposals() {
                         }}
                       >
                         Token Id: {proposal.proposerNFT.nftTokenId}
+                        {/* TODO: Add nft owner */}
                       </span>
                     </td>
                     <td style={{ alignItems: "center" }}>
@@ -243,7 +272,7 @@ export default function Proposals() {
                     </td>
                     <td>{proposal.status}</td>
                     <td>
-                      {proposal.status === "Proposed" &&
+                      {proposal.status === "Swap Proposed" &&
                         (proposal.proposer === userAddress ? (
                           <button
                             onClick={() => cancelSwap(proposal.id)}
@@ -252,20 +281,28 @@ export default function Proposals() {
                             Cancel Swap
                           </button>
                         ) : (
-                          <div>
-                            <button
-                              onClick={() => acceptSwap(proposal.id)}
-                              className={styles.button}
-                            >
-                              Accept Swap
-                            </button>
-                            <button
-                              onClick={() => rejectSwap(proposal.id)}
-                              className={styles.button}
-                            >
-                              Reject Swap
-                            </button>
-                          </div>
+                          proposal.proposee === userAddress && (
+                            <div>
+                              <button
+                                onClick={() =>
+                                  acceptSwap(
+                                    proposal.id,
+                                    proposal.proposeeNFT.nftContractAddress,
+                                    proposal.proposeeNFT.nftTokenId
+                                  )
+                                }
+                                className={styles.button}
+                              >
+                                Accept Swap
+                              </button>
+                              <button
+                                onClick={() => rejectSwap(proposal.id)}
+                                className={styles.button}
+                              >
+                                Reject Swap
+                              </button>
+                            </div>
+                          )
                         ))}
                     </td>
                   </tr>
