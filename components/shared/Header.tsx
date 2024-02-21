@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import styles from "../../app/page.module.css";
-import { passport } from "@imtbl/sdk";
-import { passportInstance } from "@/lib/config";
-import { useContext, useEffect, useState } from "react";
+import { passport, config } from "@imtbl/sdk";
+import { useEffect, useState } from "react";
 import { displayPartialAddress } from "@/lib/utils";
 import { useSharedContext } from "../context/sharedContext";
 import { BrowserProvider } from "ethers";
@@ -14,22 +13,31 @@ import { BrowserProvider } from "ethers";
  */
 export default function Header() {
   const [userInfo, setUserInfo] = useState<passport.UserProfile | null>(null);
-  const [imxProvider, setImxProvider] = useState<any | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
   // use context
   const { accountAddress, setEvmSigner, setEvmProvider, setAccountAddress } =
     useSharedContext();
 
+  const passportInstance = new passport.Passport({
+    baseConfig: {
+      environment: config.Environment.SANDBOX,
+      publishableKey: process.env.NEXT_PUBLIC_IMMUTABLE_PUBLISHABLE_KEY,
+    },
+    clientId: process.env.NEXT_PUBLIC_CLIENT_ID!,
+    redirectUri: process.env.NEXT_PUBLIC_REDIRECT_URI!,
+    logoutRedirectUri: process.env.NEXT_PUBLIC_LOGOUT_REDIRECT_URI!,
+    audience: "platform_api",
+    scope: "openid offline_access email transact",
+  });
+
   useEffect(() => {
     const init = async () => {
-      console.log("rerendering init ");
       try {
         const user = await passportInstance.getUserInfo();
-        console.log("user ", user);
+        console.log("Logged in user ", user);
 
         const cachedUserEmail = localStorage.getItem("user");
-        console.log("cached user email ", cachedUserEmail);
         if (cachedUserEmail && user && cachedUserEmail == user.email) {
           setIsLoggedIn(true);
           setUserInfo(user);
@@ -46,16 +54,13 @@ export default function Header() {
         if (_imxProvider) {
           const isRegistered = await _imxProvider.isRegisteredOffchain();
 
-          console.log("is registered ", isRegistered);
           if (!isRegistered) {
             await _imxProvider.registerOffchain();
           }
 
           const userAddress = await _imxProvider.getAddress();
-          console.log("user address ", userAddress);
           setUserInfo(user!);
           setAccountAddress(userAddress);
-          console.log("user info ", user);
         }
       } catch (error) {
         console.log("error ", error);
@@ -74,10 +79,8 @@ export default function Header() {
         setIsLoggedIn(true);
         localStorage.setItem("user", JSON.stringify(profile.email));
       }
-
-      console.log("profile ", profile);
     } catch (error) {
-      console.log("error ", error);
+      console.log("error logging in ", error);
     }
   };
 
@@ -89,7 +92,7 @@ export default function Header() {
       setAccountAddress("");
       localStorage.removeItem("user");
     } catch (error) {
-      console.log("error ", error);
+      console.log("error logging out ", error);
     }
   };
 
