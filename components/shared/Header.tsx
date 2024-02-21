@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import styles from "../../app/page.module.css";
-import { passport, config } from "@imtbl/sdk";
+import { passport } from "@imtbl/sdk";
 import { useEffect, useState } from "react";
 import { displayPartialAddress } from "@/lib/utils";
 import { useSharedContext } from "../context/sharedContext";
 import { BrowserProvider } from "ethers";
+import { passportInstance } from "@/lib/config";
 
 /**
  * Header.
@@ -18,18 +19,6 @@ export default function Header() {
   // use context
   const { accountAddress, setEvmSigner, setEvmProvider, setAccountAddress } =
     useSharedContext();
-
-  const passportInstance = new passport.Passport({
-    baseConfig: {
-      environment: config.Environment.SANDBOX,
-      publishableKey: process.env.NEXT_PUBLIC_IMMUTABLE_PUBLISHABLE_KEY,
-    },
-    clientId: process.env.NEXT_PUBLIC_CLIENT_ID!,
-    redirectUri: process.env.NEXT_PUBLIC_REDIRECT_URI!,
-    logoutRedirectUri: process.env.NEXT_PUBLIC_LOGOUT_REDIRECT_URI!,
-    audience: "platform_api",
-    scope: "openid offline_access email transact",
-  });
 
   useEffect(() => {
     const init = async () => {
