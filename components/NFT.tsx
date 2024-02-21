@@ -8,15 +8,17 @@ import { displayPartialAddress } from "@/lib/utils";
 import SwapNFT from "./Swap";
 import Proposals from "./Proposals";
 import axios from "axios";
-import { Contract } from "ethers";
+import { Contract, JsonRpcProvider } from "ethers";
+import { Wallet } from "ethers";
 
 /**
  * NFT Display.
  */
 export default function NFT() {
   const [userNFTs, setUserNFTs] = useState<any[]>([]);
-  const [proposals, setProposals] = useState<any[]>([]);
   const [availableNFTs, setAvailableNFTs] = useState<any[]>([]);
+  const [mintState, setMintState] = useState<boolean>(false);
+
   const { accountAddress, evmSigner, evmProvider } = useSharedContext();
 
   useEffect(() => {
@@ -28,10 +30,12 @@ export default function NFT() {
     });
 
     const getNFTs = async () => {
-      console.log("Getting nfts ", accountAddress);
       try {
         // Get NFTs owned by logged in user
+        if (!accountAddress) return;
+
         const chainName = "imtbl-zkevm-testnet";
+
         const response = await client.listNFTsByAccountAddress({
           chainName,
           accountAddress,
@@ -55,12 +59,24 @@ export default function NFT() {
         });
 
         // return nfts from all nfts that are not owned by logged in user
-        const filteredNFTs = allNFTs.filter((nft) => {
+        let filteredNFTs = allNFTs.filter((nft) => {
           return !userNFTsIDs.includes(nft.token_id);
         });
 
-        console.log("user nfts ", _userNFTs);
-        console.log("filtered nfts ", filteredNFTs);
+        // filter out nfts that are owned by the escrow EOA address
+        const escrowNFTs = await client.listNFTsByAccountAddress({
+          chainName,
+          accountAddress: process.env.NEXT_PUBLIC_ESCROW_EOA_ADDRESS!,
+          contractAddress: process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS!,
+        });
+
+        const escrowNFTsIDs: string[] = escrowNFTs.result.map((nft) => {
+          return nft.token_id;
+        });
+
+        filteredNFTs = filteredNFTs.filter((nft) => {
+          return !escrowNFTsIDs.includes(nft.token_id);
+        });
 
         if (filteredNFTs) setAvailableNFTs(filteredNFTs);
       } catch (error) {
@@ -69,13 +85,11 @@ export default function NFT() {
     };
 
     getNFTs();
-  }, [accountAddress]);
+  }, [accountAddress, mintState]);
 
   const mint = async () => {
     try {
       const image = await getImage();
-
-      console.log("returned image ", image);
 
       if (image) {
         const contract = new Contract(
@@ -83,27 +97,69 @@ export default function NFT() {
           [
             "function mint(address to, uint256 tokenId) public payable",
             "function totalSupply() public view returns (uint256)",
+            "function hasRole(bytes32 role, address account) public view returns (bool)",
+            "function MINTER_ROLE() public view returns (bytes32)",
           ],
           evmSigner
         );
 
-        const totalTokens = await contract.totalSupply(evmProvider as any);
+        // Get miter role
+        const minterRole = await contract.MINTER_ROLE();
+
+        // First check if user has the minter role
+        const hasRole = await contract.hasRole(minterRole, accountAddress);
+
+        console.log("User has minter role: ", hasRole);
+
+        if (!hasRole) {
+          console.log("Granting user minter role");
+
+          // Grant minter role
+          const _contract = new Contract(
+            process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS!,
+            ["function grantRole(bytes32 role, address account) public"],
+            new Wallet(
+              process.env.NEXT_PUBLIC_ADMIN_PRIVATE_KEY!,
+              new JsonRpcProvider(process.env.NEXT_PUBLIC_HTTP_URL!)
+            )
+          );
+
+          await _contract
+            .grantRole(minterRole, accountAddress, {
+              maxPriorityFeePerGas: 10e9,
+              maxFeePerGas: 15e9,
+            })
+            .then(async (receipt: any) => {
+              console.log("role granted ", receipt);
+              await receipt.wait();
+            })
+            .catch((error: any) => {
+              console.log("error granting role ", error);
+            });
+        }
+
+        const totalTokens = await contract.totalSupply();
         const tokenId = parseInt(totalTokens) + 1;
 
-        console.log("new token id ", tokenId);
+        console.log("Minting token with id ", tokenId);
 
         const txnData = await contract.mint.populateTransaction(
           accountAddress,
-          tokenId
+          tokenId,
+          {
+            maxFeePerGas: 15e9,
+            gasLimit: 200000,
+          }
         );
 
         const transaction = await evmSigner?.sendTransaction(txnData);
 
-        console.log("transaction submitted ", transaction);
-
         await transaction?.wait().then(async (receipt: any) => {
-          console.log("receipt ", receipt);
-          await refreshNFTMetadata(image, tokenId);
+          console.log("Token successfully minted ", receipt.hash);
+          await refreshNFTMetadata(image, tokenId).then(() => {
+            console.log("Token metadata updated");
+            setMintState(!mintState);
+          });
         });
       }
     } catch (error) {
@@ -137,12 +193,9 @@ export default function NFT() {
       },
     };
 
-    try {
-      const { data } = await axios.request(options);
-      console.log(data);
-    } catch (error) {
-      console.error(error);
-    }
+    await axios.request(options).catch((error) => {
+      console.error("Error updating NFT metadata ", error);
+    });
   };
 
   const getImage = async () => {
@@ -155,8 +208,6 @@ export default function NFT() {
           },
         }
       );
-
-      console.log("response ", data);
 
       const description = data.description;
       const altDescription = data.alt_description
@@ -173,11 +224,9 @@ export default function NFT() {
         imageLink: data.urls.full,
       };
 
-      console.log("image ", image);
-
       return image;
     } catch (error) {
-      console.error("Error fetching image:", error);
+      console.log("Error fetching image from unsplash", error);
     }
 
     return null;
@@ -189,7 +238,7 @@ export default function NFT() {
         <div className={styles.grid}>
           <h2>User NFTs</h2>
           <button
-            style={{ width: "fit-content", padding: "10px" }}
+            style={{ width: "fit-content", padding: "10px", cursor: "pointer" }}
             onClick={mint}
           >
             Mint NFT
