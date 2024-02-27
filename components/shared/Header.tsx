@@ -3,65 +3,53 @@
 import Link from "next/link";
 import styles from "../../app/page.module.css";
 import { passport } from "@imtbl/sdk";
-import { passportInstance } from "@/lib/config";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { displayPartialAddress } from "@/lib/utils";
 import { useSharedContext } from "../context/sharedContext";
 import { BrowserProvider } from "ethers";
+import { passportInstance } from "@/lib/config";
 
 /**
  * Header.
  */
 export default function Header() {
   const [userInfo, setUserInfo] = useState<passport.UserProfile | null>(null);
-  const [userAddress, setUserAddress] = useState<string | null>(null);
-  const [imxProvider, setImxProvider] = useState<any | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
   // use context
-  const { setEvmProvider, setEvmSigner } = useSharedContext();
+  const { accountAddress, setEvmSigner, setEvmProvider, setAccountAddress } =
+    useSharedContext();
 
   useEffect(() => {
     const init = async () => {
-      console.log("rerendering init ");
       try {
-        if (!isLoggedIn) return;
-
         const user = await passportInstance.getUserInfo();
-        console.log("user ", user);
+        console.log("Logged in user ", user);
 
-        if (user) {
+        const cachedUserEmail = localStorage.getItem("user");
+        if (cachedUserEmail && user && cachedUserEmail == user.email) {
           setIsLoggedIn(true);
+          setUserInfo(user);
         }
 
         const _imxProvider = await passportInstance.connectImx();
+
         const provider = passportInstance.connectEvm();
-        const _evmProvider = new BrowserProvider(provider);
+        const evmProvider = new BrowserProvider(provider);
+        const signer = await evmProvider.getSigner();
+        setEvmSigner(signer);
+        setEvmProvider(evmProvider);
 
-        console.log("data ", await _imxProvider.createOrder);
-
-        setEvmProvider(_evmProvider);
-
-        const signer = await _evmProvider.getSigner();
-        const address = await signer.getAddress();
-
-        console.log("evm provider ", _evmProvider);
-        console.log("signer ", signer);
-        console.log("address ", address);
-
-        if (provider) {
+        if (_imxProvider) {
           const isRegistered = await _imxProvider.isRegisteredOffchain();
 
-          console.log("is registered ", isRegistered);
           if (!isRegistered) {
             await _imxProvider.registerOffchain();
           }
 
           const userAddress = await _imxProvider.getAddress();
-          console.log("user address ", userAddress);
           setUserInfo(user!);
-          setUserAddress(userAddress);
-          console.log("user info ", user);
+          setAccountAddress(userAddress);
         }
       } catch (error) {
         console.log("error ", error);
@@ -78,11 +66,10 @@ export default function Header() {
 
       if (profile) {
         setIsLoggedIn(true);
+        localStorage.setItem("user", JSON.stringify(profile.email));
       }
-
-      console.log("profile ", profile);
     } catch (error) {
-      console.log("error ", error);
+      console.log("error logging in ", error);
     }
   };
 
@@ -90,9 +77,11 @@ export default function Header() {
     try {
       await passportInstance.logout();
       setUserInfo(null);
-      setUserAddress(null);
+      setIsLoggedIn(false);
+      setAccountAddress("");
+      localStorage.removeItem("user");
     } catch (error) {
-      console.log("error ", error);
+      console.log("error logging out ", error);
     }
   };
 
@@ -102,22 +91,15 @@ export default function Header() {
         <Link href={"/"}>NFT Escrow on Immutable X</Link>
       </h2>
       <div style={{ float: "right" }}>
-        {/* <p style={{ marginLeft: "40px" }}>
-          <Link className="button" href={`/swap`}>
-            Swap
-          </Link>
-        </p> */}
-
         {!userInfo ? (
           <p style={{ marginLeft: "40px", cursor: "pointer" }} onClick={login}>
-            Login {userAddress}
+            Login
           </p>
         ) : (
           <div className={styles.grid}>
             <p style={{ marginLeft: "20px" }}>{userInfo.email}</p>
             <p style={{ marginLeft: "20px" }}>
-              {" "}
-              {displayPartialAddress(userAddress!)}
+              {displayPartialAddress(accountAddress!)}
             </p>
             <p
               style={{ marginLeft: "20px", cursor: "pointer" }}

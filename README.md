@@ -1,37 +1,19 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Immutable NFT Escrow
 
-## Getting Started
+This is an escrow dapp that enables two parties to exchange NFts in a "trustless" way. It is built on Immutable Zkevm powered by Polygon.
 
-First, run the development server:
+## How it works
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Party A creates a swap proposal with an NFT they are willing to exchange and the NFT they want to get from the swap. Once all checks are completed, a swap proposal is created. Party B will need to accept the proposal for teh proposal to be completed <br>
+Once the proposal is accepted by party B, the escrow initiates an exchange of the two parties NFTS.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Design and Architecture
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+![https://www.figma.com/file/VNecHQLcRfuC7W2lIqTMek/Immutable-NFT-escrow?type=whiteboard&node-id=4%3A43&t=oX1ian8jN4UTiqZa-1](./public/Immutable%20NFT%20escrow.png)
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+The user interacts with the Dapp to either create, accept or reject a swap proposal.<br>
+Before the user can interact with the Dapp, s/he needs to be authenticated. The Dapp uses [immutable passport](https://www.immutable.com/products/passport) a non-custodial wallet and authentication solution that streamlines user onboarding through passwordless sign-on and automated wallet creation. Authenticating is either through a social logins or email sign in.
 
-## Learn More
+NFTs on immutable need to implement the Operator allowlist contract interface that enables token approvals and transfers to be restricted to allow listed users. This enables on-chain royalties to be enforced by restricting a contract's transfers to Immutable's version of the Seaport contract that honors royalties.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
-# immutablex-nft-escrow-dapp
+The escrow contract holds the NFTs and ensures all checks are completed before executing the swap transfers. It also manages the state of the swap proposals
