@@ -5,9 +5,10 @@ import styles from "../../app/page.module.css";
 import { passport } from "@imtbl/sdk";
 import { useEffect, useState } from "react";
 import { displayPartialAddress } from "@/lib/utils";
-import { useSharedContext } from "../context/sharedContext";
-import { BrowserProvider } from "ethers";
-import { passportInstance } from "@/lib/config";
+import { ConnectButton, darkTheme } from "thirdweb/react";
+import { createThirdwebClient } from "thirdweb";
+import { inAppWallet, createWallet } from "thirdweb/wallets";
+import { polygonAmoy, sepolia } from "thirdweb/chains";
 
 /**
  * Header.
@@ -17,98 +18,37 @@ export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
   // use context
-  const { accountAddress, setEvmSigner, setEvmProvider, setAccountAddress } =
-    useSharedContext();
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const user = await passportInstance.getUserInfo();
-        console.log("Logged in user ", user);
+  useEffect(() => {}, [isLoggedIn]);
 
-        const cachedUserEmail = localStorage.getItem("user");
-        if (cachedUserEmail && user && cachedUserEmail == user.email) {
-          setIsLoggedIn(true);
-          setUserInfo(user);
-        }
+  const wallets = [
+    inAppWallet({
+      smartAccount: {
+        chain: polygonAmoy,
+        sponsorGas: true,
+      },
+    }),
+  ];
 
-        const _imxProvider = await passportInstance.connectImx();
-
-        const provider = passportInstance.connectEvm();
-        const evmProvider = new BrowserProvider(provider);
-        const signer = await evmProvider.getSigner();
-        setEvmSigner(signer);
-        setEvmProvider(evmProvider);
-
-        if (_imxProvider) {
-          const isRegistered = await _imxProvider.isRegisteredOffchain();
-
-          if (!isRegistered) {
-            await _imxProvider.registerOffchain();
-          }
-
-          const userAddress = await _imxProvider.getAddress();
-          setUserInfo(user!);
-          setAccountAddress(userAddress);
-        }
-      } catch (error) {
-        console.log("error ", error);
-      }
-    };
-
-    init();
-  }, [isLoggedIn]);
-
-  const login = async () => {
-    try {
-      const profile: passport.UserProfile | null =
-        await passportInstance.login();
-
-      if (profile) {
-        setIsLoggedIn(true);
-        localStorage.setItem("user", JSON.stringify(profile.email));
-      }
-    } catch (error) {
-      console.log("error logging in ", error);
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await passportInstance.logout();
-      setUserInfo(null);
-      setIsLoggedIn(false);
-      setAccountAddress("");
-      localStorage.removeItem("user");
-    } catch (error) {
-      console.log("error logging out ", error);
-    }
-  };
+  const client = createThirdwebClient({
+    clientId: process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID!,
+  });
 
   return (
     <div className={styles.description}>
       <h2>
-        <Link href={"/"}>NFT Escrow on Immutable X</Link>
+        <Link href={"/"}>Mint an NFT for free</Link>
       </h2>
-      <div style={{ float: "right" }}>
-        {!userInfo ? (
-          <p style={{ marginLeft: "40px", cursor: "pointer" }} onClick={login}>
-            Login
-          </p>
-        ) : (
-          <div className={styles.grid}>
-            <p style={{ marginLeft: "20px" }}>{userInfo.email}</p>
-            <p style={{ marginLeft: "20px" }}>
-              {displayPartialAddress(accountAddress!)}
-            </p>
-            <p
-              style={{ marginLeft: "20px", cursor: "pointer" }}
-              onClick={logout}
-            >
-              Log Out
-            </p>
-          </div>
-        )}
+      <div>
+        <ConnectButton
+          client={client}
+          wallets={wallets}
+          theme={"dark"}
+          accountAbstraction={{
+            chain: polygonAmoy,
+            sponsorGas: true,
+          }}
+        />
       </div>
     </div>
   );

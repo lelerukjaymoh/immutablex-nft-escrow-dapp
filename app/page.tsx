@@ -1,15 +1,15 @@
 import NFT from "@/components/NFT";
 import styles from "./page.module.css";
 import Header from "@/components/shared/Header";
-import { SharedProvider } from "@/components/context/sharedContext";
+import { ThirdwebProvider } from "thirdweb/react";
 
 export default function Home() {
   return (
-    <SharedProvider>
+    <ThirdwebProvider>
       <main className={styles.main}>
         <Header />
         <NFT />
       </main>
-    </SharedProvider>
+    </ThirdwebProvider>
   );
 }
